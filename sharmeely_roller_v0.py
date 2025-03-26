@@ -2,7 +2,7 @@ import random
 
 def to_entries(collection):
     # Converts a dict into a list of (key, value) tuples,
-    # or returns a list as-is.
+    # or returns the collection as-is if it's already a list.
     return list(collection.items()) if isinstance(collection, dict) else list(collection)
 
 def roll_for_rarity(coatscommon, coatsuncommon, coatsrare, coatsextra, coatspedigree, coatsdesign, rarity):
@@ -31,7 +31,7 @@ def roll_for_rarity(coatscommon, coatsuncommon, coatsrare, coatsextra, coatspedi
     return phenotype, genotype
 
 def roll_for_multiple_markings(markings1, markings2, markings3, marking_choice, num_markings):
-    # Select the markings dictionary based on marking_choice:
+    # Choose the markings pool based on user input.
     if marking_choice == 1:
         markings_pool = to_entries(markings1)
     elif marking_choice == 2:
@@ -41,20 +41,18 @@ def roll_for_multiple_markings(markings1, markings2, markings3, marking_choice, 
     else:
         raise ValueError("Invalid marking choice. Must be 1, 2, or 3.")
     
-    if not markings_pool:
+    if not markings_pool or num_markings == 0:
         return None
     
-    # If unique markings are desired and the pool is large enough, we can use random.sample;
-    # otherwise, we use random.choices (allowing duplicates).
+    # Use random.sample if possible, otherwise allow duplicates with random.choice.
     if num_markings <= len(markings_pool):
-        selected_markings = random.sample(markings_pool, num_markings)
+        selected = random.sample(markings_pool, num_markings)
     else:
-        selected_markings = [random.choice(markings_pool) for _ in range(num_markings)]
+        selected = [random.choice(markings_pool) for _ in range(num_markings)]
     
-    # Combine the phenotype and genotype values from each marking.
     pheno_list = []
     geno_list = []
-    for item in selected_markings:
+    for item in selected:
         if isinstance(item, tuple):
             pheno, geno = item
         else:
@@ -62,20 +60,50 @@ def roll_for_multiple_markings(markings1, markings2, markings3, marking_choice, 
         pheno_list.append(pheno)
         geno_list.append(geno)
     
-    # Return a tuple containing the combined phenotype and genotype.
     return " ".join(pheno_list), " ".join(geno_list)
 
-def combine_results(coat_result, markings_result):
+def roll_for_multiple_mutations(mutations1, mutations2, mutations3, mutation_choice, num_mutations):
+    # Choose the mutations pool based on user input.
+    if mutation_choice == 1:
+        mutations_pool = to_entries(mutations1)
+    elif mutation_choice == 2:
+        mutations_pool = to_entries(mutations2)
+    elif mutation_choice == 3:
+        mutations_pool = to_entries(mutations3)
+    else:
+        raise ValueError("Invalid mutation choice. Must be 1, 2, or 3.")
+    
+    if not mutations_pool or num_mutations == 0:
+        return None
+    
+    if num_mutations <= len(mutations_pool):
+        selected = random.sample(mutations_pool, num_mutations)
+    else:
+        selected = [random.choice(mutations_pool) for _ in range(num_mutations)]
+    
+    pheno_list = []
+    geno_list = []
+    for item in selected:
+        if isinstance(item, tuple):
+            pheno, geno = item
+        else:
+            pheno = geno = item
+        pheno_list.append(pheno)
+        geno_list.append(geno)
+    
+    return " ".join(pheno_list), " ".join(geno_list)
+
+def combine_all_results(coat_result, markings_result, mutations_result):
     coat_pheno, coat_geno = coat_result
     
-    if markings_result:
-        mark_pheno, mark_geno = markings_result
-        combined_pheno = f"{coat_pheno} {mark_pheno}"
-        combined_geno = f"{coat_geno} {mark_geno}"
-    else:
-        combined_pheno = coat_pheno
-        combined_geno = coat_geno
-
+    # If markings/mutations were rolled, append them; otherwise, ignore.
+    mark_pheno, mark_geno = ("", "") if markings_result is None else markings_result
+    mut_pheno, mut_geno = ("", "") if mutations_result is None else mutations_result
+    
+    # Combine non-empty parts.
+    combined_pheno = " ".join(filter(None, [coat_pheno, mark_pheno, mut_pheno]))
+    combined_geno = " ".join(filter(None, [coat_geno, mark_geno, mut_geno]))
+    
     return f"Phenotype: {combined_pheno}\nGenotype: {combined_geno}"
 
 # Example usage:
@@ -93,9 +121,14 @@ if __name__ == "__main__":
     markings2 = {'Overo' : 'O_', 'Tobiano' : 'T_', 'Rabicano' : 'Rb_', 'Splash' : 'Spl_', 'Snowflake Appaloosa' : 'nLp', 'Blanket Appaloosa' : 'nLP patn', 'Leopard Appaloosa' : 'nLp patnpatn'}
     markings3 = {'Dominant White' : 'W_', 'Sabino' : 'Sb_', 'Varnish Roan Appaloosa' : 'LpLp', 'Snowcap Appaloosa' : 'LpLp patn', 'Fewspot Appaloosa' : 'LpLp patnpatn'}
     
-  # Get user inputs for coat rarity.
+    #mutations
+    mutations1 = {'Rosal' : 'rlrl', 'Radish' : 'Rd_', 'Stained' : 'St_', 'Crest' : 'Cst_', 'Cornish' : 'crcr', 'Laced' : 'L_', 'Seraph' : 'Sph_'}
+    mutations2 = {'Primal' : 'Pr_', 'Jaguar' : 'grgr', 'Sunsper' : 'Sp_', 'Willowed' : 'Wh_', 'Blotted' : 'Bb_', 'Exper' : 'xpxp'}
+    mutations3 = {'Pheonix Syndrome' : 'PXS_', 'Caped' : 'Cpd_', 'Polaris' : 'plrplr', 'Crown' : 'Cw_', 'Hotspur' : 'Hp_', 'Reverse' : 'revrev', 'Docket' : 'dckdck'}
+    
+      # Get user input for coat rarity.
     try:
-        max_rarity = int(input("Enter the max rarity (1-6): "))
+        max_rarity = int(input("Enter the max rarity for coats (1-6): "))
         print("Rolling up to rarity", max_rarity, ".")
     except ValueError:
         print("Invalid input. Please enter a number.")
@@ -104,27 +137,48 @@ if __name__ == "__main__":
     # Roll for coat.
     coat_result = roll_for_rarity(coatscommon, coatsuncommon, coatsrare, coatsextra, coatspedigree, coatsdesign, max_rarity)
     
-    # Ask the user for how many markings and which markings rarity to use.
+    # Ask the user for markings.
     try:
         num_markings = int(input("How many markings? (0-3): "))
         if num_markings < 0 or num_markings > 3:
             raise ValueError
     except ValueError:
-        print("Invalid input. Please enter a number between 0 and 3.")
+        print("Invalid input for markings. Please enter a number between 0 and 3.")
         exit(1)
     
     markings_result = None
     if num_markings > 0:
         try:
-            marking_choice = int(input("Enter marking rarity (1 to 3): "))
+            marking_choice = int(input("Enter marking rarity (1 = markings1, 2 = markings2, 3 = markings3): "))
             if marking_choice not in (1, 2, 3):
                 raise ValueError
         except ValueError:
-            print("Invalid input. Please enter 1, 2, or 3.")
+            print("Invalid input. Please enter 1, 2, or 3 for markings.")
             exit(1)
         
         markings_result = roll_for_multiple_markings(markings1, markings2, markings3, marking_choice, num_markings)
     
-    # Combine and display results.
-    final_output = combine_results(coat_result, markings_result)
+    # Ask the user for mutations.
+    try:
+        num_mutations = int(input("How many mutations? (0-3): "))
+        if num_mutations < 0 or num_mutations > 3:
+            raise ValueError
+    except ValueError:
+        print("Invalid input for mutations. Please enter a number between 0 and 3.")
+        exit(1)
+    
+    mutations_result = None
+    if num_mutations > 0:
+        try:
+            mutation_choice = int(input("Enter mutation rarity (1 = mutations1, 2 = mutations2, 3 = mutations3): "))
+            if mutation_choice not in (1, 2, 3):
+                raise ValueError
+        except ValueError:
+            print("Invalid input. Please enter 1, 2, or 3 for mutations.")
+            exit(1)
+        
+        mutations_result = roll_for_multiple_mutations(mutations1, mutations2, mutations3, mutation_choice, num_mutations)
+    
+    # Combine all results.
+    final_output = combine_all_results(coat_result, markings_result, mutations_result)
     print("\n" + final_output)
