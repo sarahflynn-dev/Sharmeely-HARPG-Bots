@@ -1,8 +1,8 @@
 import random
 
 def to_entries(collection):
-    # Converts a dict into a list of (key, value) tuples,
-    # or returns the collection as-is if it's already a list.
+    # Converts a dict into a list of (key, value) tuples;
+    # otherwise returns the collection as-is.
     return list(collection.items()) if isinstance(collection, dict) else list(collection)
 
 def roll_for_rarity(coatscommon, coatsuncommon, coatsrare, coatsextra, coatspedigree, coatsdesign, rarity):
@@ -31,24 +31,22 @@ def roll_for_rarity(coatscommon, coatsuncommon, coatsrare, coatsextra, coatspedi
     return phenotype, genotype
 
 def roll_for_multiple_markings(markings1, markings2, markings3, marking_choice, num_markings):
-    # Choose the markings pool based on user input.
     if marking_choice == 1:
-        markings_pool = to_entries(markings1)
+        pool = to_entries(markings1)
     elif marking_choice == 2:
-        markings_pool = to_entries(markings2)
+        pool = to_entries(markings2)
     elif marking_choice == 3:
-        markings_pool = to_entries(markings3)
+        pool = to_entries(markings3)
     else:
         raise ValueError("Invalid marking choice. Must be 1, 2, or 3.")
     
-    if not markings_pool or num_markings == 0:
+    if not pool or num_markings == 0:
         return None
     
-    # Use random.sample if possible, otherwise allow duplicates with random.choice.
-    if num_markings <= len(markings_pool):
-        selected = random.sample(markings_pool, num_markings)
+    if num_markings <= len(pool):
+        selected = random.sample(pool, num_markings)
     else:
-        selected = [random.choice(markings_pool) for _ in range(num_markings)]
+        selected = [random.choice(pool) for _ in range(num_markings)]
     
     pheno_list = []
     geno_list = []
@@ -63,23 +61,22 @@ def roll_for_multiple_markings(markings1, markings2, markings3, marking_choice, 
     return " ".join(pheno_list), " ".join(geno_list)
 
 def roll_for_multiple_mutations(mutations1, mutations2, mutations3, mutation_choice, num_mutations):
-    # Choose the mutations pool based on user input.
     if mutation_choice == 1:
-        mutations_pool = to_entries(mutations1)
+        pool = to_entries(mutations1)
     elif mutation_choice == 2:
-        mutations_pool = to_entries(mutations2)
+        pool = to_entries(mutations2)
     elif mutation_choice == 3:
-        mutations_pool = to_entries(mutations3)
+        pool = to_entries(mutations3)
     else:
         raise ValueError("Invalid mutation choice. Must be 1, 2, or 3.")
     
-    if not mutations_pool or num_mutations == 0:
+    if not pool or num_mutations == 0:
         return None
     
-    if num_mutations <= len(mutations_pool):
-        selected = random.sample(mutations_pool, num_mutations)
+    if num_mutations <= len(pool):
+        selected = random.sample(pool, num_mutations)
     else:
-        selected = [random.choice(mutations_pool) for _ in range(num_mutations)]
+        selected = [random.choice(pool) for _ in range(num_mutations)]
     
     pheno_list = []
     geno_list = []
@@ -93,20 +90,36 @@ def roll_for_multiple_mutations(mutations1, mutations2, mutations3, mutation_cho
     
     return " ".join(pheno_list), " ".join(geno_list)
 
-def combine_all_results(coat_result, markings_result, mutations_result):
+def roll_for_oddball(oddballs):
+    # Ask the user if they want a random abnormality.
+    answer = input("Get a random abnormality? (y/n): ").strip().lower()
+    if answer.startswith("y"):
+        # 10% chance to roll an oddball
+        if random.random() < 0.1:
+            pool = to_entries(oddballs)
+            selected = random.choice(pool)
+            if isinstance(selected, tuple):
+                oddball_pheno, _ = selected  # only append to pheno
+            else:
+                oddball_pheno = selected
+            return oddball_pheno
+    return None
+
+def combine_all_results(coat_result, markings_result, mutations_result, oddball_result):
     coat_pheno, coat_geno = coat_result
-    
-    # If markings/mutations were rolled, append them; otherwise, ignore.
     mark_pheno, mark_geno = ("", "") if markings_result is None else markings_result
     mut_pheno, mut_geno = ("", "") if mutations_result is None else mutations_result
     
-    # Combine non-empty parts.
+    # Combine coat, markings, and mutations (if any)
     combined_pheno = " ".join(filter(None, [coat_pheno, mark_pheno, mut_pheno]))
     combined_geno = " ".join(filter(None, [coat_geno, mark_geno, mut_geno]))
     
+    # Append abnormality if rolled
+    if oddball_result:
+        combined_pheno += " + " + oddball_result
+    
     return f"Phenotype: {combined_pheno}\nGenotype: {combined_geno}"
 
-# Example usage:
 if __name__ == "__main__":
     # all basecoats
     coatscommon = {'Chestnut' : 'ee_', 'Bay' : 'E_ A_', 'Black' : 'E_ aa', 'Palomino' : 'ee_ Cr_', 'Buckskin' : 'E_ A_ Cr_', 'Smokey Black' : 'E_ aa Cr_'}
@@ -126,7 +139,10 @@ if __name__ == "__main__":
     mutations2 = {'Primal' : 'Pr_', 'Jaguar' : 'grgr', 'Sunsper' : 'Sp_', 'Willowed' : 'Wh_', 'Blotted' : 'Bb_', 'Exper' : 'xpxp'}
     mutations3 = {'Pheonix Syndrome' : 'PXS_', 'Caped' : 'Cpd_', 'Polaris' : 'plrplr', 'Crown' : 'Cw_', 'Hotspur' : 'Hp_', 'Reverse' : 'revrev', 'Docket' : 'dckdck'}
     
-      # Get user input for coat rarity.
+    #abnormalities
+    oddballs = ['Heterochromia', 'Birdcatcher Spots', 'Bend-Or Spots', 'Vitiligo', 'Swarry', 'Undercoat', 'Chimera', 'Brindle', 'Shorthair', 'Emperor', 'Cift', 'Brindle']
+    
+    # Get user input for coat rarity.
     try:
         max_rarity = int(input("Enter the max rarity for coats (1-6): "))
         print("Rolling up to rarity", max_rarity, ".")
@@ -134,10 +150,10 @@ if __name__ == "__main__":
         print("Invalid input. Please enter a number.")
         exit(1)
     
-    # Roll for coat.
+    # Roll for coat color
     coat_result = roll_for_rarity(coatscommon, coatsuncommon, coatsrare, coatsextra, coatspedigree, coatsdesign, max_rarity)
     
-    # Ask the user for markings.
+    # Ask for markings
     try:
         num_markings = int(input("How many markings? (0-3): "))
         if num_markings < 0 or num_markings > 3:
@@ -158,7 +174,7 @@ if __name__ == "__main__":
         
         markings_result = roll_for_multiple_markings(markings1, markings2, markings3, marking_choice, num_markings)
     
-    # Ask the user for mutations.
+    # Ask for mutations
     try:
         num_mutations = int(input("How many mutations? (0-3): "))
         if num_mutations < 0 or num_mutations > 3:
@@ -179,6 +195,9 @@ if __name__ == "__main__":
         
         mutations_result = roll_for_multiple_mutations(mutations1, mutations2, mutations3, mutation_choice, num_mutations)
     
-    # Combine all results.
-    final_output = combine_all_results(coat_result, markings_result, mutations_result)
+    # Roll for an oddball abnormality
+    oddball_result = roll_for_oddball(oddballs)
+    
+    # Combine and display all results
+    final_output = combine_all_results(coat_result, markings_result, mutations_result, oddball_result)
     print("\n" + final_output)
